@@ -1,0 +1,53 @@
+# ROS 2 specific files
+install/
+log/
+build/
+
+# Colcon and ROS2 generated files
+.rosinstall
+.colcon_cd_root
+.colcon_cd_ignore
+
+# Compiled files
+*.py[cod]
+*$py.class
+*.so
+__pycache__/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# General temp files
+*~
+.DS_Store
+.Trash-*
+.nfs*
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-v][a-z]
+[._]sw[a-p]
+
+# IDE specific files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Test results
+.pytest_cache/
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+
+# Simulation specific
+*.bag
+*.db3 

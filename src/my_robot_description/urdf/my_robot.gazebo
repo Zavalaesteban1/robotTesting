@@ -1,0 +1,184 @@
+<?xml version="1.0"?>
+<robot>
+  <!-- Gazebo Colors -->
+  <gazebo reference="base_link">
+    <material>Gazebo/Grey</material>
+  </gazebo>
+  
+  <gazebo reference="left_rear_wheel_link">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  
+  <gazebo reference="right_rear_wheel_link">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  
+  <gazebo reference="front_left_wheel_link">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  
+  <gazebo reference="front_right_wheel_link">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  
+  <gazebo reference="ultrasonic_sensor">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+  
+  <gazebo reference="imu">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+  
+  <gazebo reference="laser">
+    <material>Gazebo/Black</material>
+  </gazebo>
+  
+  <!-- Gazebo plugins -->
+  
+  <!-- Differential Drive Controller for Car-like Robot -->
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+      <robotNamespace>/my_robot</robotNamespace>
+      <robotSimType>gazebo_ros_control/DefaultRobotHWSim</robotSimType>
+    </plugin>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="ackermann_steering" filename="libgazebo_ros_ackermann_drive.so">
+      <ros>
+        <namespace>/my_robot</namespace>
+        <remapping>cmd_vel:=cmd_vel</remapping>
+        <remapping>odom:=odom</remapping>
+        <remapping>joint_states:=joint_states</remapping>
+      </ros>
+      
+      <update_rate>100.0</update_rate>
+      
+      <!-- wheels -->
+      <front_left_joint>front_left_wheel_joint</front_left_joint>
+      <front_right_joint>front_right_wheel_joint</front_right_joint>
+      <rear_left_joint>left_rear_wheel_joint</rear_left_joint>
+      <rear_right_joint>right_rear_wheel_joint</rear_right_joint>
+      <left_steering_joint>front_left_pivot_joint</left_steering_joint>
+      <right_steering_joint>front_right_pivot_joint</right_steering_joint>
+      
+      <!-- Max absolute steer angle for tyre in radians-->
+      <max_steer>0.5</max_steer>
+      
+      <!-- Max absolute steering angle of steering wheel in radians-->
+      <max_steering_angle>0.5</max_steering_angle>
+      
+      <!-- Max absolute linear speed in m/s -->
+      <max_speed>2.0</max_speed>
+      
+      <!-- Wheel separation and diameter -->
+      <wheel_separation>0.15</wheel_separation>
+      <wheel_diameter>0.1</wheel_diameter>
+      
+      <!-- Wheel separation and radius multipliers -->
+      <wheel_separation_multiplier>1.0</wheel_separation_multiplier>
+      <wheel_radius_multiplier>1.0</wheel_radius_multiplier>
+      
+      <!-- Publish ground truth odometry (tf) -->
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>true</publish_wheel_tf>
+      <publish_wheel_joint_state>true</publish_wheel_joint_state>
+      
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+    </plugin>
+  </gazebo>
+  
+  <!-- LiDAR sensor -->
+  <gazebo reference="laser">
+    <sensor type="ray" name="laser_sensor">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>360</samples>
+            <resolution>1</resolution>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.10</min>
+          <max>10.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <plugin name="gazebo_ros_laser_controller" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <namespace>/my_robot</namespace>
+          <remapping>~/out:=scan</remapping>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+        <frame_name>laser</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+  
+  <!-- IMU -->
+  <gazebo reference="imu">
+    <sensor type="imu" name="imu_sensor">
+      <plugin name="imu_plugin" filename="libgazebo_ros_imu_sensor.so">
+        <ros>
+          <namespace>/my_robot</namespace>
+          <remapping>~/out:=imu</remapping>
+        </ros>
+        <initial_orientation_as_reference>false</initial_orientation_as_reference>
+        <frame_name>imu</frame_name>
+      </plugin>
+      <always_on>true</always_on>
+      <update_rate>100</update_rate>
+      <visualize>true</visualize>
+    </sensor>
+  </gazebo>
+  
+  <!-- Ultrasonic Sensor (Simulated with Gazebo ray sensor) -->
+  <gazebo reference="ultrasonic_sensor">
+    <sensor type="ray" name="ultrasonic">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>false</visualize>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>5</samples>
+            <resolution>1</resolution>
+            <min_angle>-0.2</min_angle>
+            <max_angle>0.2</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.02</min>
+          <max>3.0</max>
+          <resolution>0.01</resolution>
+        </range>
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+      </ray>
+      <plugin name="gazebo_ros_ultrasonic_controller" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <namespace>/my_robot</namespace>
+          <remapping>~/out:=ultrasound</remapping>
+        </ros>
+        <output_type>sensor_msgs/Range</output_type>
+        <radiation_type>ultrasound</radiation_type>
+        <frame_name>ultrasonic_sensor</frame_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+</robot> 
