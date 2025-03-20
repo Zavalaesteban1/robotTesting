@@ -7,20 +7,24 @@
   <maintainer email="user@example.com">User</maintainer>
   <license>Apache License 2.0</license>
 
-  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_python</buildtool_depend>
   
-  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>visualization_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>std_msgs</depend>
   
   <exec_depend>slam_toolbox</exec_depend>
   <exec_depend>nav2_msgs</exec_depend>
   <exec_depend>nav2_bringup</exec_depend>
   <exec_depend>my_robot_description</exec_depend>
-  <exec_depend>my_robot_simulation</exec_depend>
   <exec_depend>rviz2</exec_depend>
   <exec_depend>nav2_map_server</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
+  <exec_depend>teleop_twist_keyboard</exec_depend>
 
   <export>
-    <build_type>ament_cmake</build_type>
+    <build_type>ament_python</build_type>
   </export>
 </package>

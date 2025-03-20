@@ -67,7 +67,7 @@ def generate_launch_description():
         output='screen'
     )
     
-    # Start obstacle publisher for maze visualization
+    # Start obstacle publisher for maze visualization - direct execution of script
     obstacle_script_path = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'obstacle_publisher.py')
     obstacle_cmd = ExecuteProcess(
         cmd=['python3', obstacle_script_path],
@@ -81,7 +81,7 @@ def generate_launch_description():
     ld.add_action(static_transform_terrain)
     ld.add_action(robot_state_publisher_node)
     ld.add_action(obstacle_cmd)  # Start obstacle publisher before RViz
-    ld.add_action(rviz_node)
+    ld.add_action(rviz_node)     # Then start RViz so it can see the markers
     ld.add_action(teleop_node)
     ld.add_action(controller_cmd)
     
