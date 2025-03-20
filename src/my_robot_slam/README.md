@@ -1,108 +1,63 @@
-# My Robot SLAM and Navigation System
+# My Robot Description
 
-This package contains the necessary components for SLAM (Simultaneous Localization and Mapping) and navigation for a firefighter robot.
+This ROS2 package contains a simple robot model created for learning purposes. The robot consists of a base, a body, two wheels, and casters for stability.
 
-## Overview
+## Robot Components
 
-The system provides:
+- Base (blue): The main platform of the robot
+- Body (red): The upper part of the robot mounted on the base
+- Wheels (green): Two wheels on either side that can rotate
+- Casters (grey): Front and back casters for stability
 
-- SLAM mapping capabilities using slam_toolbox
-- Map saving and management
-- Navigation support with Nav2
+## Dependencies
 
-## Prerequisites
-
-Make sure you have the following packages installed:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y ros-jazzy-slam-toolbox ros-jazzy-nav2-bringup ros-jazzy-nav2-map-server
-```
+- ROS2 (Tested on Humble)
+- robot_state_publisher
+- joint_state_publisher_gui
+- rviz2
 
 ## Building the Package
 
-1. Build the packages:
+Clone this repository into your ROS2 workspace's `src` directory and then build:
 
 ```bash
 cd ~/ros2_ws
-colcon build --symlink-install
+colcon build --packages-select my_robot_description
+source install/setup.bash
 ```
 
-2. Source the workspace:
+## Visualizing the Robot
+
+To visualize the robot in RViz2, run:
 
 ```bash
-source ~/ros2_ws/install/setup.bash
+ros2 launch my_robot_description display.launch.py
 ```
 
-## Usage
+This will open RViz2 with our robot model loaded. You can use the joint_state_publisher_gui to move the robot's wheels.
 
-### 1. Starting SLAM for Mapping
+## Understanding URDF
 
-To start SLAM with the physical robot:
+The Unified Robot Description Format (URDF) is an XML format used in ROS to describe robots. In this project, we've defined:
 
-```bash
-ros2 launch my_robot_slam slam_only.launch.py use_sim_time:=false
-```
+- **Links**: The physical parts of the robot (base, body, wheels, casters)
+- **Joints**: The connections between links (fixed, continuous)
+- **Visual elements**: How the robot appears in RViz
+- **Collision elements**: Used for collision detection
+- **Inertial properties**: Mass and inertia for physics simulation
 
-If you want to visualize with RViz:
+To learn more about URDF, visit the [ROS URDF Tutorials](https://docs.ros.org/en/humble/Tutorials/Intermediate/URDF/URDF-Main.html).
 
-```bash
-ros2 run rviz2 rviz2
-```
+## Further Learning
 
-Add the following displays in RViz:
-- TF
-- LaserScan (topic: /scan)  
-- Map (topic: /map)
+This is a basic example to get started with robot modeling in ROS2. To expand on this project, you could:
 
-### 2. Saving the Map
+1. Add sensors like cameras or LiDAR
+2. Create more complex joint types
+3. Implement controllers for movement
+4. Add more detailed meshes instead of primitive shapes
+5. Simulate the robot in Gazebo
 
-After you've created a map by driving around the environment, save it:
+## License
 
-```bash
-ros2 launch my_robot_slam save_map_simple.launch.py map_file_name:=my_map
-```
-
-This will save the map in the `maps` directory with the specified name.
-
-### 3. Using the Map for Navigation
-
-To use the created map for navigation with Nav2:
-
-```bash
-ros2 launch nav2_bringup navigation_launch.py use_sim_time:=false map:=/path/to/my_map.yaml
-```
-
-### 4. Transferring Maps Between Computers
-
-To use the maps created on your development computer with your Raspberry Pi:
-
-1. Copy the map files (`.pgm` and `.yaml`) from your development computer to the Raspberry Pi
-   ```bash
-   scp ~/ros2_ws/src/my_robot_slam/maps/my_map.* pi@raspberry_pi_ip:/home/pi/ros2_ws/src/my_robot_slam/maps/
-   ```
-
-2. Update your launch file to use the map:
-   ```bash
-   ros2 launch nav2_bringup navigation_launch.py map:=/home/pi/ros2_ws/src/my_robot_slam/maps/my_map.yaml
-   ```
-
-## SLAM Configuration
-
-You can customize the SLAM Toolbox parameters in `config/slam_toolbox_params.yaml`:
-- Adjust `resolution` for map detail (default is 0.05 meters per pixel)
-- Modify `max_laser_range` based on your LiDAR's capabilities
-- Fine-tune loop closure parameters for better map consistency
-
-## Troubleshooting
-
-### Transform Issues
-If you encounter transform-related errors, check:
-- The `odom_frame`, `map_frame`, and `base_frame` parameters in the SLAM configuration
-- Ensure your robot is publishing the correct TF tree
-
-### SLAM Quality Issues
-If map quality is poor:
-- Ensure your robot moves slowly enough for accurate mapping
-- Adjust the scan matcher parameters in the configuration
-- Make sure the LiDAR data is clean and has minimal noise 
+This project is licensed under the MIT License - see the LICENSE file for details. 
