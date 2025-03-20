@@ -10,7 +10,7 @@ import random
 import os
 
 class ObstaclePublisher(Node):
-    """Node that publishes obstacles as visualization markers."""
+    """Node that publishes obstacles as visualization markers for the competition field."""
     
     def __init__(self):
         super().__init__('obstacle_publisher')
@@ -22,61 +22,52 @@ class ObstaclePublisher(Node):
         # Timer for publishing obstacles - increase frequency
         self.timer = self.create_timer(0.2, self.publish_obstacles)  # Publish 5 times per second
         
-        # Create a variety of obstacles with different shapes
-        self.obstacles = self.generate_maze_obstacles()
+        # Create a variety of obstacles for the competition field
+        self.obstacles = self.generate_competition_field()
         
         # Initialize counter for logging
         self._count = 0
         
         # Print working directory for debugging
         self.get_logger().info(f'Current working directory: {os.getcwd()}')
-        self.get_logger().info(f'Obstacle publisher initialized with {len(self.obstacles)} obstacles')
+        self.get_logger().info(f'Competition field initialized with {len(self.obstacles)} obstacles')
     
-    def generate_maze_obstacles(self):
-        """Generate a maze-like environment with obstacles."""
+    def generate_competition_field(self):
+        """Generate a competition field with boundary walls, tree obstacles, and challenging terrain."""
         markers = []
         marker_id = 0
         
-        # Create walls for a maze - increase height for better visibility
-        wall_height = 0.8  # Taller for better visibility
-        wall_thickness = 0.1
+        # Units conversion: ft to meters (1 foot = 0.3048 meters, 1 inch = 0.0254 meters)
+        field_size = 8 * 0.3048  # 8 ft in meters
+        wall_height = 5 * 0.0254  # 5 inches in meters
+        obstacle_diameter = 1 * 0.0254  # 1 inch diameter in meters
+        min_path_width = 1.1 * 0.3048  # 1.1 ft in meters
+        terrain_elevation = 0.5 * 0.0254  # 0.5 inches in meters
         
         # Define colors with high alpha for visibility
-        wall_color = ColorRGBA(r=0.9, g=0.9, b=0.9, a=1.0)  # Brighter gray
-        obstacle_color = ColorRGBA(r=1.0, g=0.0, b=0.0, a=1.0)  # Bright Red
-        column_color = ColorRGBA(r=0.0, g=0.2, b=1.0, a=1.0)  # Bright Blue
+        wall_color = ColorRGBA(r=0.7, g=0.7, b=0.7, a=1.0)  # Gray walls
+        obstacle_color = ColorRGBA(r=0.6, g=0.4, b=0.2, a=1.0)  # Brown tree obstacles
+        sand_color = ColorRGBA(r=0.9, g=0.8, b=0.6, a=1.0)  # Sand terrain
+        gravel_color = ColorRGBA(r=0.5, g=0.5, b=0.5, a=1.0)  # Gravel terrain
+        fire_zone_color = ColorRGBA(r=1.0, g=0.4, b=0.4, a=0.3)  # Red for potential fire zones
+        start_zone_color = ColorRGBA(r=0.4, g=1.0, b=0.4, a=0.3)  # Green for robot start zone
         
-        # Create outer boundary walls
-        boundary_size = 5.0
+        # Create boundary walls - 8ft x 8ft square
+        wall_thickness = 0.05  # 5cm thick walls
+        half_field = field_size / 2
+        
+        # Boundary walls (x, y, width, height)
         wall_positions = [
-            # Outer walls (x, y, width, height)
-            (-boundary_size/2, 0, wall_thickness, boundary_size),  # Left wall
-            (boundary_size/2, 0, wall_thickness, boundary_size),   # Right wall
-            (0, -boundary_size/2, boundary_size, wall_thickness),  # Bottom wall
-            (0, boundary_size/2, boundary_size, wall_thickness)    # Top wall
+            (-half_field, 0, wall_thickness, field_size),  # Left wall
+            (half_field, 0, wall_thickness, field_size),   # Right wall
+            (0, -half_field, field_size, wall_thickness),  # Bottom wall
+            (0, half_field, field_size, wall_thickness)    # Top wall
         ]
-        
-        # Add interior maze walls
-        interior_walls = [
-            # Horizontal walls (x, y, width, height)
-            (-1.5, -1.0, 2.0, wall_thickness),
-            (1.5, 1.0, 2.0, wall_thickness),
-            (-2.0, 2.0, 2.0, wall_thickness),
-            (0.0, -2.0, 3.0, wall_thickness),
-            
-            # Vertical walls (x, y, width, height)
-            (-1.0, 1.5, wall_thickness, 2.0),
-            (2.0, -1.5, wall_thickness, 2.0),
-            (1.0, 0.0, wall_thickness, 3.0),
-            (-2.0, -1.0, wall_thickness, 1.5)
-        ]
-        
-        wall_positions.extend(interior_walls)
         
         # Add walls
         for x, y, width, height in wall_positions:
             marker = Marker()
-            marker.header.frame_id = 'map'  # Ensure the frame_id is correct
+            marker.header.frame_id = 'map'
             marker.header.stamp = self.get_clock().now().to_msg()
             marker.ns = 'walls'
             marker.id = marker_id
@@ -84,7 +75,7 @@ class ObstaclePublisher(Node):
             marker.type = Marker.CUBE
             marker.action = Marker.ADD
             
-            # Set position - ensure x, y, z are float values
+            # Set position
             marker.pose.position.x = float(x)
             marker.pose.position.y = float(y)
             marker.pose.position.z = float(wall_height / 2.0)
@@ -95,9 +86,9 @@ class ObstaclePublisher(Node):
             marker.pose.orientation.z = 0.0
             marker.pose.orientation.w = 1.0
             
-            # Set scale - make them a bit larger for visibility
-            marker.scale.x = float(width * 1.2)
-            marker.scale.y = float(height * 1.2)
+            # Set scale
+            marker.scale.x = float(width)
+            marker.scale.y = float(height)
             marker.scale.z = float(wall_height)
             
             # Set color
@@ -105,26 +96,157 @@ class ObstaclePublisher(Node):
             
             markers.append(marker)
         
-        # Add some cylindrical obstacles (columns)
-        column_positions = [
-            (-1.5, 1.5),
-            (1.5, -1.5),
-            (0.0, 0.0),
-            (-2.0, -2.0),
-            (2.0, 2.0)
+        # Create four corner zones (potential fire or start locations)
+        zone_size = field_size / 4  # Each zone is 2ft x 2ft
+        corner_positions = [
+            (half_field - zone_size/2, half_field - zone_size/2),     # Top-right
+            (half_field - zone_size/2, -half_field + zone_size/2),    # Bottom-right
+            (-half_field + zone_size/2, half_field - zone_size/2),    # Top-left
+            (-half_field + zone_size/2, -half_field + zone_size/2)    # Bottom-left
         ]
         
-        for x, y in column_positions:
+        # Randomly select one corner for fire and another for start
+        fire_corner_idx = random.randint(0, 3)
+        start_corner_idx = (fire_corner_idx + 2) % 4  # Use opposite corner for start
+        
+        # Create corner zones
+        for i, (x, y) in enumerate(corner_positions):
             marker = Marker()
             marker.header.frame_id = 'map'
             marker.header.stamp = self.get_clock().now().to_msg()
-            marker.ns = 'columns'
+            
+            if i == fire_corner_idx:
+                marker.ns = 'fire_zone'
+                marker.color = fire_zone_color
+            elif i == start_corner_idx:
+                marker.ns = 'start_zone'
+                marker.color = start_zone_color
+            else:
+                marker.ns = 'corner_zone'
+                marker.color = ColorRGBA(r=0.5, g=0.5, b=1.0, a=0.2)  # Blue for other corners
+                
+            marker.id = marker_id
+            marker_id += 1
+            marker.type = Marker.CUBE
+            marker.action = Marker.ADD
+            
+            # Set position (slightly above ground)
+            marker.pose.position.x = float(x)
+            marker.pose.position.y = float(y)
+            marker.pose.position.z = float(0.01)  # Just above ground
+            
+            # Set orientation (no rotation)
+            marker.pose.orientation.x = 0.0
+            marker.pose.orientation.y = 0.0
+            marker.pose.orientation.z = 0.0
+            marker.pose.orientation.w = 1.0
+            
+            # Set scale
+            marker.scale.x = float(zone_size)
+            marker.scale.y = float(zone_size)
+            marker.scale.z = float(0.01)  # Very thin
+            
+            markers.append(marker)
+            
+            # Add a simulated fire in the fire zone (just for visualization)
+            if i == fire_corner_idx:
+                fire_marker = Marker()
+                fire_marker.header.frame_id = 'map'
+                fire_marker.header.stamp = self.get_clock().now().to_msg()
+                fire_marker.ns = 'fire'
+                fire_marker.id = marker_id
+                marker_id += 1
+                fire_marker.type = Marker.CYLINDER
+                fire_marker.action = Marker.ADD
+                
+                # Set position
+                fire_marker.pose.position.x = float(x)
+                fire_marker.pose.position.y = float(y)
+                fire_marker.pose.position.z = float(wall_height / 2.0)
+                
+                # Set orientation (no rotation)
+                fire_marker.pose.orientation.x = 0.0
+                fire_marker.pose.orientation.y = 0.0
+                fire_marker.pose.orientation.z = 0.0
+                fire_marker.pose.orientation.w = 1.0
+                
+                # Set scale
+                fire_marker.scale.x = float(0.3)
+                fire_marker.scale.y = float(0.3)
+                fire_marker.scale.z = float(wall_height)
+                
+                # Set color (orange-red for fire)
+                fire_marker.color = ColorRGBA(r=1.0, g=0.3, b=0.0, a=0.8)
+                
+                markers.append(fire_marker)
+        
+        # Create tree obstacles (dowels/PVC pipes)
+        # Create a grid of potential positions inside field excluding corner zones
+        grid_spacing = min_path_width  # Minimum path width between obstacles
+        grid_points_x = int((field_size - 2*zone_size) / grid_spacing) + 1
+        grid_points_y = int((field_size - 2*zone_size) / grid_spacing) + 1
+        
+        tree_positions = []
+        
+        # Create a maze-like pattern with tree obstacles that ensures pathways
+        # Start with a grid pattern and then remove some to create paths
+        for i in range(grid_points_x):
+            for j in range(grid_points_y):
+                x = -half_field + zone_size + i * grid_spacing
+                y = -half_field + zone_size + j * grid_spacing
+                
+                # Skip positions too close to corner zones
+                too_close_to_corner = False
+                for corner_x, corner_y in corner_positions:
+                    distance = math.sqrt((x - corner_x)**2 + (y - corner_y)**2)
+                    if distance < zone_size:
+                        too_close_to_corner = True
+                        break
+                
+                if not too_close_to_corner:
+                    # Add some randomness to positions to make it look more natural
+                    x += random.uniform(-0.1, 0.1)
+                    y += random.uniform(-0.1, 0.1)
+                    
+                    # Only keep some trees to create paths (70% chance)
+                    if random.random() < 0.7:
+                        tree_positions.append((x, y))
+        
+        # Remove some trees to ensure there are navigable paths
+        # Create main paths by removing trees that block direct routes
+        for i in range(len(tree_positions)):
+            # Check if this tree blocks major paths
+            x, y = tree_positions[i]
+            
+            # Skip trees that are along major pathways
+            on_major_path = False
+            
+            # Main X and Y axis paths
+            if abs(x) < min_path_width/2 or abs(y) < min_path_width/2:
+                on_major_path = True
+                
+            # Diagonal paths
+            if abs(abs(x) - abs(y)) < min_path_width/2:
+                on_major_path = True
+                
+            if on_major_path:
+                tree_positions[i] = None
+        
+        # Filter out None values
+        tree_positions = [pos for pos in tree_positions if pos is not None]
+        
+        # Add tree obstacles
+        for x, y in tree_positions:
+            marker = Marker()
+            marker.header.frame_id = 'map'
+            marker.header.stamp = self.get_clock().now().to_msg()
+            marker.ns = 'trees'
             marker.id = marker_id
             marker_id += 1
             marker.type = Marker.CYLINDER
             marker.action = Marker.ADD
             
-            # Set position - ensure x, y, z are float values
+            # Set position
             marker.pose.position.x = float(x)
             marker.pose.position.y = float(y)
             marker.pose.position.z = float(wall_height / 2.0)
@@ -135,34 +257,38 @@ class ObstaclePublisher(Node):
             marker.pose.orientation.z = 0.0
             marker.pose.orientation.w = 1.0
             
-            # Set scale - make them a bit larger for visibility
-            marker.scale.x = 0.5  # Larger radius
-            marker.scale.y = 0.5
+            # Set scale - diameter of obstacles is 1 inch
+            marker.scale.x = float(obstacle_diameter)
+            marker.scale.y = float(obstacle_diameter)
             marker.scale.z = float(wall_height)
             
-            # Set color
-            marker.color = column_color
+            # Set color - brown for trees
+            marker.color = obstacle_color
             
             markers.append(marker)
         
-        # Add some small obstacles
-        for i in range(10):
+        # Add challenging terrain areas (sand and gravel)
+        # Create several patches of different terrains
+        terrain_patches = [
+            # x, y, width, height, type
+            (-half_field/2, half_field/3, half_field/2, half_field/3, 'sand'),
+            (half_field/3, -half_field/2, half_field/3, half_field/2, 'gravel'),
+        ]
+        
+        for x, y, width, height, terrain_type in terrain_patches:
             marker = Marker()
             marker.header.frame_id = 'map'
             marker.header.stamp = self.get_clock().now().to_msg()
-            marker.ns = 'obstacles'
+            marker.ns = terrain_type
             marker.id = marker_id
             marker_id += 1
-            # Use SPHERE instead of CUBE for better visibility
-            marker.type = Marker.SPHERE
+            marker.type = Marker.CUBE
             marker.action = Marker.ADD
             
-            # Set position - ensure x, y, z are float values
-            x_pos = float(random.uniform(-boundary_size/2 + 0.5, boundary_size/2 - 0.5))
-            y_pos = float(random.uniform(-boundary_size/2 + 0.5, boundary_size/2 - 0.5))
-            marker.pose.position.x = x_pos
-            marker.pose.position.y = y_pos
-            marker.pose.position.z = float(wall_height / 2.0)
+            # Set position - slightly above ground level
+            marker.pose.position.x = float(x)
+            marker.pose.position.y = float(y)
+            marker.pose.position.z = float(terrain_elevation / 2.0)
             
             # Set orientation (no rotation)
             marker.pose.orientation.x = 0.0
@@ -170,13 +296,16 @@ class ObstaclePublisher(Node):
             marker.pose.orientation.z = 0.0
             marker.pose.orientation.w = 1.0
             
-            # Set scale - make them a bit larger for visibility
-            marker.scale.x = 0.5  # Larger size
-            marker.scale.y = 0.5
-            marker.scale.z = 0.5
+            # Set scale
+            marker.scale.x = float(width)
+            marker.scale.y = float(height)
+            marker.scale.z = float(terrain_elevation)
             
-            # Set color
-            marker.color = obstacle_color
+            # Set color based on terrain type
+            if terrain_type == 'sand':
+                marker.color = sand_color
+            else:  # gravel
+                marker.color = gravel_color
             
             markers.append(marker)
         
@@ -195,7 +324,7 @@ class ObstaclePublisher(Node):
         
         # Print periodic update for debugging
         if self._count % 10 == 0:
-            self.get_logger().info(f'Publishing {len(self.obstacles)} obstacles')
+            self.get_logger().info(f'Publishing {len(self.obstacles)} competition field elements')
         
         # Update timestamp on all markers and publish individually
         for marker in self.obstacles:
@@ -209,7 +338,8 @@ class ObstaclePublisher(Node):
         
         # Only log once to avoid flooding
         if self._count == 0:
-            self.get_logger().info(f'Publishing {len(self.obstacles)} obstacles with namespaces: {set([m.ns for m in self.obstacles])}')
+            namespaces = set([m.ns for m in self.obstacles])
+            self.get_logger().info(f'Publishing competition field with namespaces: {namespaces}')
         self._count += 1
         if self._count >= 50:
             self._count = 0

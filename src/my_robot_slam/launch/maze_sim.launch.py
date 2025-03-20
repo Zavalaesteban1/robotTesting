@@ -21,7 +21,7 @@ def generate_launch_description():
     with open(urdf_file, 'r') as file:
         robot_description = file.read()
     
-    # Path to RViz config - use the maze-specific config
+    # Path to RViz config - use the competition-specific config
     rviz_config = os.path.join(my_robot_description_dir, 'rviz', 'maze_config.rviz')
     
     # Create the static transform publishers for the terrain
@@ -42,7 +42,7 @@ def generate_launch_description():
         output='screen'
     )
     
-    # Start RViz with the maze-specific config
+    # Start RViz with the competition-specific config
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
@@ -51,7 +51,7 @@ def generate_launch_description():
         output='screen'
     )
     
-    # Start teleop node
+    # Start teleop node for robot control
     teleop_node = Node(
         package='teleop_twist_keyboard',
         executable='teleop_twist_keyboard',
@@ -60,28 +60,51 @@ def generate_launch_description():
         output='screen'
     )
     
-    # Start robot controller
+    # Start robot controller to convert teleop commands to joint states
     script_path = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'teleop_to_joints.py')
     controller_cmd = ExecuteProcess(
         cmd=['python3', script_path],
         output='screen'
     )
     
-    # Start obstacle publisher for maze visualization - direct execution of script
+    # Start competition field publisher - using direct execution of script
+    # This creates the 8ft x 8ft field with tree obstacles and challenging terrain
     obstacle_script_path = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'obstacle_publisher.py')
-    obstacle_cmd = ExecuteProcess(
+    field_publisher_cmd = ExecuteProcess(
         cmd=['python3', obstacle_script_path],
         output='screen'
+    )
+    
+    # Add transforms for the challenging terrain areas
+    # This will create a separate reference frame for the elevated terrain patches
+    static_transform_sand = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='static_transform_sand',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'sand_terrain']
+    )
+    
+    static_transform_gravel = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='static_transform_gravel',
+        arguments=['0', '0', '0', '0', '0', '0', 'map', 'gravel_terrain']
     )
     
     # Create and return the launch description
     ld = LaunchDescription()
     
-    # Add nodes
+    # Add transformations for the environment
     ld.add_action(static_transform_terrain)
+    ld.add_action(static_transform_sand)
+    ld.add_action(static_transform_gravel)
+    
+    # Add robot and field elements in the correct order
     ld.add_action(robot_state_publisher_node)
-    ld.add_action(obstacle_cmd)  # Start obstacle publisher before RViz
-    ld.add_action(rviz_node)     # Then start RViz so it can see the markers
+    ld.add_action(field_publisher_cmd)  # Start field publisher before RViz
+    ld.add_action(rviz_node)            # Then start RViz so it can see the markers
+    
+    # Add control elements
     ld.add_action(teleop_node)
     ld.add_action(controller_cmd)
     
