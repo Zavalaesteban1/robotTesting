@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 from launch import LaunchDescription
 from launch.actions import ExecuteProcess, IncludeLaunchDescription
@@ -13,14 +14,14 @@ def generate_launch_description():
     source_dir = os.path.join(os.path.expanduser('~'), 'ros2_ws', 'src')
     
     # Paths to scripts
-    round1_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'round1_controller.py')
+    real_controller_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'round1_realController.py')
     lidar_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'lidar_simulator.py')
     wall_detector_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'wall_detector_debug.py')
     
     # Paths to configuration files
-    rviz_config = os.path.join(source_dir, 'my_robot_slam', 'config', 'advanced_lidar_view.rviz')
+    rviz_config = os.path.join(source_dir, 'my_robot_slam', 'config', 'maze_config.rviz')
     
-    # Start the competition field
+    # Create launch description
     ld = LaunchDescription()
     
     # First launch maze_sim.launch.py to set up the environment
@@ -51,7 +52,7 @@ def generate_launch_description():
         output='screen'
     )
     
-    # Add additional transforms for better coverage and redundancy
+    # Add additional transforms for better coverage
     static_tf_odom_to_map = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -65,12 +66,6 @@ def generate_launch_description():
         executable='static_transform_publisher',
         name='static_tf_map_to_laser',
         arguments=['0', '0', '0.1', '0', '0', '0', 'map', 'laser_in_map'],
-        output='screen'
-    )
-    
-    # Then add the Round 1 controller
-    round1_controller_node = ExecuteProcess(
-        cmd=['python3', round1_script],
         output='screen'
     )
     
@@ -89,14 +84,21 @@ def generate_launch_description():
         output='screen'
     )
     
+    # Launch the A* navigation controller
+    astar_controller_node = ExecuteProcess(
+        cmd=['python3', real_controller_script],
+        output='screen'
+    )
+    
+    # Add all nodes to launch sequence
     ld.add_action(maze_sim_cmd)
-    ld.add_action(static_tf_base_link_to_base_footprint)  # Add static transform publisher
-    ld.add_action(static_tf_laser_to_base_link)  # Add static transform publisher
-    ld.add_action(static_tf_odom_to_map)  # Add additional transform
-    ld.add_action(static_tf_map_to_laser)  # Add additional transform
+    ld.add_action(static_tf_base_link_to_base_footprint)
+    ld.add_action(static_tf_laser_to_base_link)
+    ld.add_action(static_tf_odom_to_map)
+    ld.add_action(static_tf_map_to_laser)
     ld.add_action(lidar_simulator_node)
-    ld.add_action(round1_controller_node)
     ld.add_action(wall_detector_node)
     ld.add_action(rviz_node)
+    ld.add_action(astar_controller_node)
     
     return ld

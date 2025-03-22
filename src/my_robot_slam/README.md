@@ -102,4 +102,61 @@ Potential areas for enhancement:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Teleop Control Guide
+
+The robot uses a modified teleop keyboard controller that maps keyboard inputs to appropriate movement commands for a car-like vehicle with Ackermann steering.
+
+### Key Mappings
+
+| Key | Movement |
+| --- | --- |
+| `i` | Drive forward |
+| `,` | Drive backward |
+| `j` | Turn left |
+| `l` | Turn right |
+| `u` | Forward + left turn |
+| `o` | Forward + right turn |
+| `.` | Backward + left turn |
+| `m` | Backward + right turn |
+| `k` | Stop |
+
+### Speed Control
+
+| Key | Action |
+| --- | --- |
+| `q` | Increase speed and turn rate by 10% |
+| `z` | Decrease speed and turn rate by 10% |
+| `w` | Increase speed by 10% |
+| `x` | Decrease speed by 10% |
+| `e` | Increase turn rate by 10% |
+| `c` | Decrease turn rate by 10% |
+
+### Notes on Car-Like Robot Movement
+
+Unlike omnidirectional robots, car-like vehicles with Ackermann steering have specific movement constraints:
+
+1. They can only move forward and backward along their longitudinal axis
+2. They cannot move sideways (no lateral/strafing movement)
+3. Turning requires coordination of forward/backward movement and steering angle
+
+The teleop controller has been specially configured to:
+- Convert diagonal key presses into appropriate forward/backward movement + steering
+- Provide small "creep" forward motion when turning in place for better visualization
+- Adapt turning behavior based on direction of travel (forward vs reverse)
+
+## Running the Simulation
+
+```bash
+# Launch the robot with teleop control
+ros2 launch my_robot_slam round1_teleop.launch.py
+```
+
+## Troubleshooting
+
+If the robot doesn't move as expected:
+- Check the terminal running the teleop keyboard node for key mapping information
+- Ensure you have an active terminal window with keyboard focus
+- Try using gentle, incremental commands rather than full-speed movements
+- Watch the robot controller logs for debugging information about commands received 

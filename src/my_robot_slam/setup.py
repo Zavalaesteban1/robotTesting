@@ -29,6 +29,7 @@ setup(
     entry_points={
         'console_scripts': [
             'obstacle_publisher = my_robot_slam.obstacle_publisher:main',
+            'round1_real_controller = my_robot_slam.round1_realController:main',
         ],
     },
 ) 

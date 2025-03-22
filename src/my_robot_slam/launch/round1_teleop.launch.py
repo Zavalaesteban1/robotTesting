@@ -13,9 +13,10 @@ def generate_launch_description():
     source_dir = os.path.join(os.path.expanduser('~'), 'ros2_ws', 'src')
     
     # Paths to scripts
-    round1_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'round1_controller.py')
     lidar_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'lidar_simulator.py')
     wall_detector_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'wall_detector_debug.py')
+    teleop_to_joints_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'teleop_to_joints.py')
+    data_collector_script = os.path.join(source_dir, 'my_robot_slam', 'scripts', 'data_collector.py')
     
     # Paths to configuration files
     rviz_config = os.path.join(source_dir, 'my_robot_slam', 'config', 'advanced_lidar_view.rviz')
@@ -52,25 +53,44 @@ def generate_launch_description():
     )
     
     # Add additional transforms for better coverage and redundancy
-    static_tf_odom_to_map = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_tf_odom_to_map',
-        arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
-        output='screen'
+    # static_tf_odom_to_map = Node(
+    #     package='tf2_ros',
+    #     executable='static_transform_publisher',
+    #     name='static_tf_odom_to_map',
+    #     arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
+    #     output='screen'
+    # )
+    
+    # static_tf_map_to_laser = Node(
+    #     package='tf2_ros',
+    #     executable='static_transform_publisher',
+    #     name='static_tf_map_to_laser',
+    #     arguments=['0', '0', '0.1', '0', '0', '0', 'map', 'laser_in_map'],
+    #     output='screen'
+    # )
+    
+    # Add teleop node for keyboard control with proper configuration
+    teleop_node = Node(
+        package='teleop_twist_keyboard',
+        executable='teleop_twist_keyboard',
+        name='teleop_twist_keyboard',
+        prefix='xterm -e',
+        output='screen',
+        parameters=[
+            {'use_sim_time': True},
+            {'key_timeout': 0.3},  # More responsive key handling
+            {'scale_linear': 0.5},  # Reduce default linear speed
+            {'scale_angular': 0.8}  # Slightly reduce angular speed
+        ],
+        # Ensure proper topic mapping
+        remappings=[
+            ('/cmd_vel', '/cmd_vel')  # Map to expected topic
+        ]
     )
     
-    static_tf_map_to_laser = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='static_tf_map_to_laser',
-        arguments=['0', '0', '0.1', '0', '0', '0', 'map', 'laser_in_map'],
-        output='screen'
-    )
-    
-    # Then add the Round 1 controller
-    round1_controller_node = ExecuteProcess(
-        cmd=['python3', round1_script],
+    # Add teleop-to-joints controller
+    teleop_to_joints_node = ExecuteProcess(
+        cmd=['python3', teleop_to_joints_script],
         output='screen'
     )
     
@@ -89,14 +109,24 @@ def generate_launch_description():
         output='screen'
     )
     
+    # Add a simple data collector node that subscribes to LiDAR data
+    # and records information about detected walls/obstacles
+    data_collector_node = ExecuteProcess(
+        cmd=['python3', data_collector_script],
+        output='screen'
+    )
+    
+    # Add all nodes to launch sequence
     ld.add_action(maze_sim_cmd)
-    ld.add_action(static_tf_base_link_to_base_footprint)  # Add static transform publisher
-    ld.add_action(static_tf_laser_to_base_link)  # Add static transform publisher
-    ld.add_action(static_tf_odom_to_map)  # Add additional transform
-    ld.add_action(static_tf_map_to_laser)  # Add additional transform
+    ld.add_action(static_tf_base_link_to_base_footprint)
+    ld.add_action(static_tf_laser_to_base_link)
+    # ld.add_action(static_tf_odom_to_map)
+    # ld.add_action(static_tf_map_to_laser)
     ld.add_action(lidar_simulator_node)
-    ld.add_action(round1_controller_node)
+    ld.add_action(teleop_node)
+    ld.add_action(teleop_to_joints_node)
     ld.add_action(wall_detector_node)
+    ld.add_action(data_collector_node)
     ld.add_action(rviz_node)
     
-    return ld
+    return ld 

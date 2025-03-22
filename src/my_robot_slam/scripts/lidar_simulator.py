@@ -108,17 +108,25 @@ class LiDARSimulator(Node):
         # Create a 5m x 5m square arena
         self.get_logger().warn("Adding default walls to ensure obstacle detection")
         
-        # Left wall - make walls thicker (increased from 0.1 to 0.3)
-        self.walls.append(((-2.5, 0.0, 0.0), (0.3, 5.0, 0.5)))
+        # MUCH THICKER WALLS - doubled thickness from 0.3m to 0.6m
         
-        # Right wall - make walls thicker
-        self.walls.append(((2.5, 0.0, 0.0), (0.3, 5.0, 0.5)))
+        # Left wall - much thicker walls
+        self.walls.append(((-2.5, 0.0, 0.0), (0.6, 5.0, 0.5)))
         
-        # Bottom wall - make walls thicker
-        self.walls.append(((0.0, -2.5, 0.0), (5.0, 0.3, 0.5)))
+        # Right wall - much thicker walls
+        self.walls.append(((2.5, 0.0, 0.0), (0.6, 5.0, 0.5)))
         
-        # Top wall - make walls thicker
-        self.walls.append(((0.0, 2.5, 0.0), (5.0, 0.3, 0.5)))
+        # Bottom wall - much thicker walls
+        self.walls.append(((0.0, -2.5, 0.0), (5.0, 0.6, 0.5)))
+        
+        # Top wall - much thicker walls
+        self.walls.append(((0.0, 2.5, 0.0), (5.0, 0.6, 0.5)))
+        
+        # Add corner walls to ensure no gaps at corners
+        self.walls.append(((-2.5, -2.5, 0.0), (0.6, 0.6, 0.5)))  # Bottom-left corner
+        self.walls.append(((2.5, -2.5, 0.0), (0.6, 0.6, 0.5)))   # Bottom-right corner
+        self.walls.append(((2.5, 2.5, 0.0), (0.6, 0.6, 0.5)))    # Top-right corner
+        self.walls.append(((-2.5, 2.5, 0.0), (0.6, 0.6, 0.5)))   # Top-left corner
         
         # Add some obstacles - make them larger too
         self.obstacles.append(((1.0, 1.0, 0.0), (0.7, 0.7, 0.5)))
@@ -330,7 +338,7 @@ class LiDARSimulator(Node):
                 
                 # Increase the effective size of all obstacles by adding a safety margin
                 # This makes walls and obstacles "appear" larger to the LiDAR
-                safety_margin = 0.2  # 20cm safety margin
+                safety_margin = 0.5  # Increased from 0.2 to 0.5 (50cm safety margin)
                 effective_scale = (scale[0] + safety_margin, scale[1] + safety_margin, scale[2])
                 
                 # Check if this is from trees (cylindrical) or walls (rectangular)
@@ -338,6 +346,10 @@ class LiDARSimulator(Node):
                 is_wall = (scale[0] > 3 * scale[1]) or (scale[1] > 3 * scale[0])
                 
                 if is_wall:
+                    # Apply an even larger safety margin for walls specifically
+                    wall_safety_margin = 0.8  # 80cm safety margin for walls
+                    effective_scale = (scale[0] + wall_safety_margin, scale[1] + wall_safety_margin, scale[2])
+                    
                     # For walls, use line-segment intersection with the 4 wall edges
                     # Calculate wall corners with the enhanced scale
                     half_width = effective_scale[0] / 2.0

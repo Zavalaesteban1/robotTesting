@@ -602,17 +602,17 @@ class Round1Controller(Node):
         # Enhanced logging to help determine if walls are being detected
         self.get_logger().info(f"Distances - center: {center_front_min:.2f}, front: {front_min:.2f}, front-left: {front_left_min:.2f}, front-right: {front_right_min:.2f}, left: {left_min:.2f}, right: {right_min:.2f}, rear: {rear_min:.2f}")
         
-        # MUCH more aggressive thresholds - at least 3x the original values
+        # MUCH more aggressive thresholds - INCREASED VALUES FOR WALL DETECTION 
         # Use an AGGRESSIVE threshold that gets larger as the robot moves faster
         # This provides a larger safety margin at higher speeds
-        dynamic_threshold = self.obstacle_threshold * 3.0  # 3x higher than base threshold
+        dynamic_threshold = self.obstacle_threshold * 5.0  # Increased from 3x to 5x higher than base threshold
         
         # Use a longer lookahead for the center front area
-        center_threshold = self.obstacle_threshold * 4.0  # 4x higher for direct front
+        center_threshold = self.obstacle_threshold * 6.0  # Increased from 4x to 6x for direct front
         
         # SIMPLE REVERSAL BEHAVIOR - If any obstacle is too close, just back up
         # Check if anything is dangerously close in front
-        critical_distance = self.min_safe_distance * 3.5  # Increased dramatically for more safety margin
+        critical_distance = self.min_safe_distance * 5.0  # Increased from 3.5 to 5.0 for more safety margin
         
         # If there's anything close in front, REVERSE!
         if front_min < critical_distance or center_front_min < critical_distance:
@@ -621,18 +621,18 @@ class Round1Controller(Node):
             # Only reverse if there's space behind us
             if rear_min > critical_distance:
                 # Reverse movement with slight rotation to avoid getting stuck
-                linear_x = -0.06  # Reduced further for more careful movement
+                linear_x = -0.1  # Increased from -0.06 for faster escape
                 
                 # Random rotation to prevent getting stuck in the same position
                 if front_left_min < front_right_min:
-                    angular_z = -0.6  # Turn right while reversing - higher turning
+                    angular_z = -1.0  # Increased from -0.6 for more aggressive turning
                 else:
-                    angular_z = 0.6  # Turn left while reversing - higher turning
+                    angular_z = 1.0  # Increased from 0.6 for more aggressive turning
             else:
                 # If blocked behind too, just rotate in place
                 self.get_logger().warn("BLOCKED BEHIND TOO - ROTATING IN PLACE")
                 linear_x = 0.0
-                angular_z = 1.2  # Rotate even faster to find a path
+                angular_z = 1.5  # Increased from 1.2 for faster rotation
                 
             return True, linear_x, angular_z
         
@@ -653,14 +653,14 @@ class Round1Controller(Node):
             # Decide which way to turn based on more open space (left or right)
             if left_min > right_min:
                 # More space to the left, make sharp left turn
-                angular_z = 1.2  # Increased from 1.0
-                linear_x = 0.0  # Complete stop instead of slow movement
-                self.get_logger().warn("CENTER OBSTACLE - turning sharp left")
+                angular_z = 2.0  # Increased from 1.2 for very aggressive turning
+                linear_x = -0.05  # Reverse slowly while turning instead of stopping
+                self.get_logger().error("WALL DEAD AHEAD - turning sharp left and backing up")
             else:
                 # More space to the right, make sharp right turn
-                angular_z = -1.2  # Increased from -1.0
-                linear_x = 0.0  # Complete stop
-                self.get_logger().warn("CENTER OBSTACLE - turning sharp right")
+                angular_z = -2.0  # Increased from -1.2 for very aggressive turning
+                linear_x = -0.05  # Reverse slowly while turning
+                self.get_logger().error("WALL DEAD AHEAD - turning sharp right and backing up")
             return True, linear_x, angular_z
         
         # Handle frontal obstacles
@@ -668,19 +668,19 @@ class Round1Controller(Node):
             # Determine which way to turn based on more open space
             if front_left_min > front_right_min and not obstacle_left:
                 # More space to the left, turn left
-                angular_z = 1.0  # Increased from 0.9
-                linear_x = 0.01  # Reduced from 0.02 - almost stop
-                self.get_logger().warn("Obstacle ahead, turning left")
+                angular_z = 1.5  # Increased from 1.0 for more aggressive turning
+                linear_x = 0.0  # Full stop while turning instead of slow forward
+                self.get_logger().error("WALL AHEAD - turning left")
             elif not obstacle_right:
                 # More space to the right, turn right
-                angular_z = -1.0  # Increased from -0.9
-                linear_x = 0.01  # Reduced from 0.02
-                self.get_logger().warn("Obstacle ahead, turning right")
+                angular_z = -1.5  # Increased from -1.0
+                linear_x = 0.0  # Full stop
+                self.get_logger().error("WALL AHEAD - turning right")
             else:
                 # Both sides blocked, rotate in place to find open space
-                angular_z = 1.5  # Increased from 1.2
-                linear_x = 0.0
-                self.get_logger().warn("Obstacles on all sides, rotating in place")
+                angular_z = 2.0  # Increased from 1.5
+                linear_x = -0.05  # Slight backward movement while rotating
+                self.get_logger().error("WALLS ON ALL SIDES - rotating rapidly to find an exit")
                 
             return True, linear_x, angular_z
         
@@ -794,12 +794,18 @@ class Round1Controller(Node):
         else:
             # ULTRA-CONSERVATIVE MOVEMENT: drastically reduced speeds
             if abs(angle_diff) > 0.2:  # First align with the target (reduced threshold)
-                cmd.linear.x = 0.01  # Almost stopped when turning (reduced from 0.02)
-                cmd.angular.z = 0.2 * angle_diff  # Slower turning (reduced from 0.4)
+                cmd.linear.x = 0.0  # Complete stop when turning (reduced from 0.01)
+                cmd.angular.z = 0.15 * angle_diff  # Even slower turning (reduced from 0.2)
+                self.get_logger().info("Aligning with target - rotation only")
             else:
                 # Move toward the target - use much lower max velocity
-                cmd.linear.x = min(0.04, distance * 0.4)  # Reduced from 0.08, added proportional control
-                cmd.angular.z = 0.2 * angle_diff  # Keep correcting angle while moving (reduced from 0.3)
+                cmd.linear.x = min(0.03, distance * 0.3)  # Further reduced from 0.04, more conservative proportional control
+                cmd.angular.z = 0.15 * angle_diff  # Reduced from 0.2 for gentler corrections
+                
+                # Additional check - if target is far, move even slower to have more reaction time
+                if distance > 1.0:
+                    cmd.linear.x = min(cmd.linear.x, 0.02)  # Cap speed for distant targets
+                    self.get_logger().info(f"Long distance movement - reduced speed to {cmd.linear.x:.3f}")
         
         return cmd, distance < self.target_reached_threshold
     

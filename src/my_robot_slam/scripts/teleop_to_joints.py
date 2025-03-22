@@ -60,56 +60,126 @@ class RobotController(Node):
         self.get_logger().info('Robot controller initialized with reduced speed')
     
     def cmd_vel_callback(self, msg):
-        # Store velocity commands with speed scaling
-        self.linear_x = msg.linear.x * self.speed_scale  # Apply speed reduction
+        # Extract raw velocity commands
+        raw_linear_x = msg.linear.x
+        raw_linear_y = msg.linear.y  # Will be non-zero for lateral movement keys
+        raw_angular_z = msg.angular.z
         
-        # Fix: Invert angular_z for correct steering direction
-        # In ROS, positive angular.z is counterclockwise (left), but our steering might need adjustment
-        self.angular_z = -msg.angular.z  # Inverted to fix the steering direction
+        # Log raw commands for debugging
+        self.get_logger().info(f'TELEOP RAW: x={raw_linear_x:.2f}, y={raw_linear_y:.2f}, rot={raw_angular_z:.2f}')
         
-        # Calculate target steering angle from angular velocity
+        # For car-like (Ackermann) vehicles:
+        # 1. Handle forward/backward movement with linear.x
+        # 2. Map angular.z to steering angle
+        # 3. For diagonal movements, combine linear.x with angular.z
+        
+        # First, process forward/backward motion with speed scaling
+        self.linear_x = raw_linear_x * self.speed_scale
+        
+        # If there's lateral movement requested, convert it to a more intuitive
+        # combined forward/turning movement for car-like vehicles
+        if abs(raw_linear_y) > 0.05:
+            # If moving sideways is attempted, add a gentle turning component
+            # while maintaining forward motion
+            side_movement_dir = 1.0 if raw_linear_y > 0 else -1.0
+            
+            # Only apply this if we're also moving forward
+            if abs(raw_linear_x) > 0.05:
+                # Blend the lateral movement into angular steering
+                # This makes diagonal keys (u, o, m, .) work more intuitively
+                additional_steering = side_movement_dir * 0.5  # Half of max steering
+                raw_angular_z = raw_angular_z + additional_steering
+                
+                # Show feedback about the conversion
+                self.get_logger().info(f'Converting lateral y={raw_linear_y:.2f} to additional steering={additional_steering:.2f}')
+            else:
+                # If trying to move purely sideways, give a helpful message
+                self.get_logger().warn(f"Note: Car-like robots can't move sideways directly. Use i/k for forward/back and j/l for turning.")
+        
+        # Now handle rotation/steering:
+        # We invert the sign because positive angular.z (counter-clockwise) should map
+        # to negative steering angle (left turn) for a car
+        self.angular_z = -raw_angular_z
+        
+        # Compute target steering angle based on angular velocity command
         if abs(self.linear_x) > 0.01:
-            # Use angular velocity to determine steering angle
-            # Simple approximation for Ackermann steering
+            # Active driving mode - use normal steering response
             self.target_steering_angle = np.clip(
                 self.angular_z * self.steering_response,
                 -self.max_steering_angle,
                 self.max_steering_angle
             )
+            self.get_logger().info(f'DRIVING MODE: forward={self.linear_x:.2f}, steer={self.target_steering_angle:.2f}')
         else:
-            # When not moving, we can still set steering position with higher response
+            # Static turning mode - allow steering in place with reduced response
+            # (Note: real cars can't turn in place, but we allow it for better usability)
             self.target_steering_angle = np.clip(
                 self.angular_z * 0.5,
                 -self.max_steering_angle,
                 self.max_steering_angle
             )
+            # Add a small amount of forward motion to help visualize steering direction
+            if abs(self.angular_z) > 0.05:
+                self.linear_x = 0.05 * self.speed_scale  # Very slow forward motion while turning in place
+            self.get_logger().info(f'STATIC MODE: steer={self.target_steering_angle:.2f}, creep={self.linear_x:.2f}')
             
-        self.get_logger().debug(f'CMD: lin={self.linear_x:.2f}, ang={self.angular_z:.2f}, target_steer={self.target_steering_angle:.2f}')
+        # Final command summary
+        self.get_logger().info(f'FINAL CMD: speed={self.linear_x:.2f}, steering={self.target_steering_angle:.2f}')
     
     def update_robot_position(self, dt):
         """Update robot position based on kinematics model"""
+        # Exit early if no movement
         if abs(self.linear_x) < 0.001:
-            return  # No movement
-        
-        # Simple bicycle model (Ackermann steering approximation)
-        v = self.linear_x
-        if abs(self.steering_angle) > 0.001:
-            # Calculate turning radius based on steering angle
-            # Add a small offset to prevent division by zero
-            steering_angle = self.steering_angle if abs(self.steering_angle) > 0.01 else 0.01
-            turning_radius = self.wheel_base / math.tan(abs(steering_angle)) * (1.0 if steering_angle >= 0 else -1.0)
+            return
             
-            # Calculate change in orientation (fix sign for correct turning direction)
+        # Simple bicycle/Ackermann model
+        v = self.linear_x  # Forward/backward velocity
+        
+        # Handle turning
+        if abs(self.steering_angle) > 0.01:  # Non-zero steering angle
+            # Compute turning radius (avoid division by zero with min threshold)
+            # For a car-like vehicle with Ackermann steering:
+            # - Positive steering angle = wheels point right = turn right = negative turning radius
+            # - Negative steering angle = wheels point left = turn left = positive turning radius
+            effective_angle = max(abs(self.steering_angle), 0.01) * (-1.0 if self.steering_angle > 0 else 1.0)
+            turning_radius = self.wheel_base / math.tan(abs(self.steering_angle))
+            
+            # Direction of rotation depends on steering angle sign and velocity direction
+            turning_radius *= effective_angle / abs(effective_angle)
+            
+            # Handling backward motion - changes turning behavior
+            if v < 0:
+                turning_radius *= -1.0  # Reverse direction when moving backward
+            
+            # Change in orientation depends on speed, turning radius and time
             delta_theta = (v * dt) / turning_radius
             
-            # Update position based on circular motion
+            # Update orientation
             self.theta += delta_theta
+            
+            # Update position (arc motion)
             self.x += turning_radius * (math.sin(self.theta + delta_theta) - math.sin(self.theta))
             self.y += turning_radius * (math.cos(self.theta) - math.cos(self.theta + delta_theta))
+            
+            # Log turning movement
+            self.get_logger().info(f'TURNING: radius={turning_radius:.2f}m, delta_θ={delta_theta:.4f}rad, v={v:.2f}m/s')
         else:
             # Straight line motion
-            self.x += v * dt * math.cos(self.theta)
-            self.y += v * dt * math.sin(self.theta)
+            dx = v * dt * math.cos(self.theta)
+            dy = v * dt * math.sin(self.theta)
+            
+            # Update position
+            self.x += dx
+            self.y += dy
+            
+            # Log straight movement
+            self.get_logger().info(f'STRAIGHT: dx={dx:.3f}m, dy={dy:.3f}m, v={v:.2f}m/s')
+        
+        # Normalize theta to keep it within [-π, π]
+        while self.theta > math.pi:
+            self.theta -= 2.0 * math.pi
+        while self.theta < -math.pi:
+            self.theta += 2.0 * math.pi
     
     def publish_robot_transform(self):
         """Publish the robot's position as a TF transform"""
