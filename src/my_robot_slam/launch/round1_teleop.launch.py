@@ -20,6 +20,7 @@ def generate_launch_description():
     
     # Paths to configuration files
     rviz_config = os.path.join(source_dir, 'my_robot_slam', 'config', 'advanced_lidar_view.rviz')
+    slam_params_file = os.path.join(source_dir, 'my_robot_slam', 'config', 'slam_toolbox_params.yaml')
     
     # Start the competition field
     ld = LaunchDescription()
@@ -51,23 +52,6 @@ def generate_launch_description():
         arguments=['0', '0', '0.1', '0', '0', '0', 'base_link', 'laser'],
         output='screen'
     )
-    
-    # Add additional transforms for better coverage and redundancy
-    # static_tf_odom_to_map = Node(
-    #     package='tf2_ros',
-    #     executable='static_transform_publisher',
-    #     name='static_tf_odom_to_map',
-    #     arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
-    #     output='screen'
-    # )
-    
-    # static_tf_map_to_laser = Node(
-    #     package='tf2_ros',
-    #     executable='static_transform_publisher',
-    #     name='static_tf_map_to_laser',
-    #     arguments=['0', '0', '0.1', '0', '0', '0', 'map', 'laser_in_map'],
-    #     output='screen'
-    # )
     
     # Add teleop node for keyboard control with proper configuration
     teleop_node = Node(
@@ -116,17 +100,25 @@ def generate_launch_description():
         output='screen'
     )
     
+    # Add SLAM Toolbox node for mapping
+    slam_toolbox_node = Node(
+        package='slam_toolbox',
+        executable='sync_slam_toolbox_node',
+        name='slam_toolbox',
+        output='screen',
+        parameters=[slam_params_file]
+    )
+    
     # Add all nodes to launch sequence
     ld.add_action(maze_sim_cmd)
     ld.add_action(static_tf_base_link_to_base_footprint)
     ld.add_action(static_tf_laser_to_base_link)
-    # ld.add_action(static_tf_odom_to_map)
-    # ld.add_action(static_tf_map_to_laser)
     ld.add_action(lidar_simulator_node)
     ld.add_action(teleop_node)
     ld.add_action(teleop_to_joints_node)
     ld.add_action(wall_detector_node)
     ld.add_action(data_collector_node)
+    ld.add_action(slam_toolbox_node)
     ld.add_action(rviz_node)
     
     return ld 
