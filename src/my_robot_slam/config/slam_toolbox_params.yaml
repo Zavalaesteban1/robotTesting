@@ -1,4 +1,4 @@
-slam_toolbox:
+slam_toolbox_mapping:
   ros__parameters:
     # ROS Parameters
     odom_frame: odom
@@ -9,12 +9,13 @@ slam_toolbox:
     use_sim_time: true
     
     # General SLAM Parameters
-    map_update_interval: 1.0
+    map_update_interval: 5.0
     resolution: 0.05
     max_laser_range: 10.0
-    minimum_time_interval: 0.5
-    transform_timeout: 0.2
+    minimum_time_interval: 1.0
+    transform_timeout: 3.0
     tf_buffer_duration: 30.0
+    scan_queue_size: 5
     
     # Loop Closure Parameters
     loop_search_maximum_distance: 3.0
@@ -36,3 +37,23 @@ slam_toolbox:
     motion_model_alpha3: 0.1
     motion_model_alpha4: 0.1
     motion_model_alpha5: 0.1 
+# QoS settings
+    use_lifecycle_manager: true  # Add this line
+    qos_overrides:
+      /tf_static:
+        reliability: reliable
+        durability: transient_local
+      /tf:
+        reliability: reliable
+        durability: volatile
+      /scan:
+        reliability: best_effort
+        durability: volatile
+      /map:  # Add this section
+        reliability: reliable
+        durability: transient_local
+
+  
+    
+      # Debugging
+    debug_logging: true  # Enable for better troubleshooting

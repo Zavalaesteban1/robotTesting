@@ -1,0 +1,22 @@
+digraph G {
+"base_link" -> "front_left_pivot"[label=" Broadcaster: default_authority\nAverage rate: 16.002\nBuffer length: 4.999\nMost recent transform: 1742676614.369446\nOldest transform: 1742676609.369949\n"];
+"base_footprint" -> "base_link"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"front_left_pivot" -> "front_left_wheel_link"[label=" Broadcaster: default_authority\nAverage rate: 16.002\nBuffer length: 4.999\nMost recent transform: 1742676614.369446\nOldest transform: 1742676609.369949\n"];
+"base_link" -> "front_right_pivot"[label=" Broadcaster: default_authority\nAverage rate: 16.002\nBuffer length: 4.999\nMost recent transform: 1742676614.369446\nOldest transform: 1742676609.369949\n"];
+"front_right_pivot" -> "front_right_wheel_link"[label=" Broadcaster: default_authority\nAverage rate: 16.002\nBuffer length: 4.999\nMost recent transform: 1742676614.369446\nOldest transform: 1742676609.369949\n"];
+"base_link" -> "left_rear_wheel_link"[label=" Broadcaster: default_authority\nAverage rate: 16.002\nBuffer length: 4.999\nMost recent transform: 1742676614.369446\nOldest transform: 1742676609.369949\n"];
+"base_link" -> "right_rear_wheel_link"[label=" Broadcaster: default_authority\nAverage rate: 16.002\nBuffer length: 4.999\nMost recent transform: 1742676614.369446\nOldest transform: 1742676609.369949\n"];
+"base_link" -> "steering_control"[label=" Broadcaster: default_authority\nAverage rate: 16.002\nBuffer length: 4.999\nMost recent transform: 1742676614.369446\nOldest transform: 1742676609.369949\n"];
+"map" -> "base_footprint"[label=" Broadcaster: default_authority\nAverage rate: 37.423\nBuffer length: 5.05\nMost recent transform: 1742676614.419914\nOldest transform: 1742676609.36948\n"];
+"base_link" -> "imu"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"base_link" -> "lidar_base"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"base_link" -> "laser"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"base_link" -> "ultrasonic_sensor"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"map" -> "gravel_terrain"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"map" -> "terrain"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+"map" -> "sand_terrain"[label=" Broadcaster: default_authority\nAverage rate: 10000.0\nBuffer length: 0.0\nMost recent transform: 0.0\nOldest transform: 0.0\n"];
+edge [style=invis];
+ subgraph cluster_legend { style=bold; color=black; label ="view_frames Result";
+"Recorded at time: 1742676614.4679322"[ shape=plaintext ] ;
+}->"map";
+}

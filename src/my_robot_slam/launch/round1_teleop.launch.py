@@ -57,7 +57,7 @@ def generate_launch_description():
     teleop_node = Node(
         package='teleop_twist_keyboard',
         executable='teleop_twist_keyboard',
-        name='teleop_twist_keyboard',
+        name='teleop_twist_keyboardRound1',
         prefix='xterm -e',
         output='screen',
         parameters=[
@@ -88,7 +88,7 @@ def generate_launch_description():
     rviz_node = Node(
         package='rviz2',
         executable='rviz2',
-        name='rviz2',
+        name='rviz2Round1',
         arguments=['-d', rviz_config],
         output='screen'
     )
@@ -103,10 +103,23 @@ def generate_launch_description():
     # Add SLAM Toolbox node for mapping
     slam_toolbox_node = Node(
         package='slam_toolbox',
-        executable='sync_slam_toolbox_node',
-        name='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_toolbox_mapping',
         output='screen',
-        parameters=[slam_params_file]
+        parameters=[slam_params_file, {'use_sim_time': True}],
+    )
+
+    # Add a node to automatically activate SLAM
+    slam_lifecycle_manager = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_slam',
+        output='screen',
+        parameters=[
+            {'autostart': True},
+            {'node_names': ['slam_toolbox_mapping']},
+            {'use_sim_time': True}
+        ]
     )
     
     # Add all nodes to launch sequence
@@ -119,6 +132,7 @@ def generate_launch_description():
     ld.add_action(wall_detector_node)
     ld.add_action(data_collector_node)
     ld.add_action(slam_toolbox_node)
+    ld.add_action(slam_lifecycle_manager)  # Add this line
     ld.add_action(rviz_node)
     
     return ld 

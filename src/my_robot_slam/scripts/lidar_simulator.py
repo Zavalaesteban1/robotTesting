@@ -20,7 +20,15 @@ class LiDARSimulator(Node):
         
         # Store node startup time for diagnostics
         self._node_start_time = time.time()
+
+        # Initialize all storage lists BEFORE any other method calls
+        self.walls = []
+        self.obstacles = []
+        self.markers_received = False
         
+        # Then add walls and other initialization
+        self.add_default_walls()
+            
         # Declare parameters
         self.declare_parameter('scan_topic', 'scan')
         self.declare_parameter('laser_frame', 'laser')
@@ -78,9 +86,9 @@ class LiDARSimulator(Node):
         self.add_default_walls()
         
         # Store obstacles
-        self.obstacles = []
-        self.walls = []
-        self.markers_received = False
+        # self.obstacles = []  # REMOVE THIS or comment it out
+        # self.walls = []      # REMOVE THIS or comment it out
+        self.markers_received = True
         
         # Setup TF listener for robot position
         self.tf_buffer = Buffer()
@@ -93,13 +101,13 @@ class LiDARSimulator(Node):
         self.publish_base_to_laser_transform()
         
         # Setup timer for publishing scan
-        self.timer = self.create_timer(1.0 / self.publish_rate, self.publish_scan)
+        self.timer = self.create_timer(0.5 / self.publish_rate, self.publish_scan)
         
         # Add a diagnostic timer to ensure we are receiving markers
         self.diagnostic_timer = self.create_timer(5.0, self.check_marker_status)
         
         # Add a timer to publish empty scans until real data is available
-        self.startup_timer = self.create_timer(0.1, self.publish_empty_scan)
+        self.startup_timer = self.create_timer(1.0, self.publish_empty_scan)
         
         self.get_logger().info('LiDAR simulator started')
     
@@ -443,22 +451,22 @@ class LiDARSimulator(Node):
             return
         
         # Create LaserScan message
-        scan = LaserScan()
-        scan.header.stamp = self.get_clock().now().to_msg()
-        scan.header.frame_id = self.laser_frame
+        scan_msg = LaserScan()
+        scan_msg.header.stamp = self.get_clock().now().to_msg()
+        scan_msg.header.frame_id = "laser"  # Must match your TF tree
         
         # Set scan parameters
-        scan.angle_min = self.angle_min
-        scan.angle_max = self.angle_max
-        scan.angle_increment = self.angle_increment
-        scan.time_increment = 0.0
-        scan.scan_time = self.scan_time
-        scan.range_min = self.range_min
-        scan.range_max = self.range_max
+        scan_msg.angle_min = self.angle_min
+        scan_msg.angle_max = self.angle_max
+        scan_msg.angle_increment = self.angle_increment
+        scan_msg.time_increment = 0.0
+        scan_msg.scan_time = self.scan_time
+        scan_msg.range_min = self.range_min
+        scan_msg.range_max = self.range_max
         
         # Calculate number of rays
         num_readings = int(round((self.angle_max - self.angle_min) / self.angle_increment))
-        scan.ranges = [self.range_max] * num_readings
+        scan_msg.ranges = [self.range_max] * num_readings
         
         # Raytrace for each angle if we have obstacles to detect
         all_obstacles = self.walls + self.obstacles
@@ -504,19 +512,19 @@ class LiDARSimulator(Node):
                 if distance < self.range_min:
                     distance = self.range_min
                 
-                scan.ranges[i] = distance
+                scan_msg.ranges[i] = distance
             
             # Visualize detected obstacles for debugging
             if random.random() < 0.2:  # Only visualize periodically
                 self.visualize_environment(robot_pos)
         
         # Calculate percentage of rays that hit something
-        hits = sum(1 for r in scan.ranges if r < self.range_max * 0.99)
-        hit_percentage = 100 * hits / len(scan.ranges)
+        hits = sum(1 for r in scan_msg.ranges if r < self.range_max * 0.99)
+        hit_percentage = 100 * hits / len(scan_msg.ranges)
         self.get_logger().info(f"Scan completed: {hit_percentage:.1f}% of rays hit obstacles")
         
         # Publish scan
-        self.scan_publisher.publish(scan)
+        self.scan_publisher.publish(scan_msg)
     
     def visualize_environment(self, robot_pos):
         """Visualize the environment for debugging"""
