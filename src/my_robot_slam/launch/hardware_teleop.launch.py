@@ -52,24 +52,25 @@ def generate_launch_description():
         output='screen'
     )
     
-    # Add teleop node for keyboard control
-    teleop_node = Node(
-        package='teleop_twist_keyboard',
-        executable='teleop_twist_keyboard',
-        name='teleop_twist_keyboard_hardware',
-        prefix='xterm -e',
-        output='screen',
-        parameters=[
-            {'key_timeout': 0.3},  # More responsive key handling
-            {'scale_linear': 0.5},  # Reduce default linear speed
-            {'scale_angular': 0.8}  # Slightly reduce angular speed
-        ]
-    )
-    
-    # Add hardware controller node
+    # Hardware controller node - now as a proper ROS 2 node with parameters
     hardware_controller_node = ExecuteProcess(
-        cmd=['python3', hardware_controller_script],
-        output='screen'
+        cmd=[
+            'python3', hardware_controller_script,
+            '--ros-args',
+            '-p', 'hardware_type:=esp',  # Change to 'esp' for ESP serial communication
+            '-p', 'serial_port:=/dev/ttyUSB0',  # Update with your actual ESP serial port
+            '-p', 'serial_baud:=115200',  # Common ESP baud rate
+            '-p', 'wheel_radius:=0.05',
+            '-p', 'track_width:=0.15',
+            '-p', 'speed_scale:=0.3',
+            '-p', 'use_esp_odometry:=true',  # Enable ESP odometry feedback
+            '-p', 'odom_frame:=odom',  # Frame ID for odometry
+            '-p', 'base_frame:=base_footprint',  # Base frame ID
+            '-p', 'esp_odometry_format:=O,{x},{y},{theta},{vx},{vtheta}'  # Expected odometry format
+        ],
+        output='screen',
+        # We're using ExecuteProcess because the script is not yet registered as an entry point
+        # This will still work perfectly for testing with real hardware
     )
     
     # Launch RViz with our custom configuration
@@ -81,12 +82,18 @@ def generate_launch_description():
         output='screen'
     )
     
+    # Add a note about how to run teleop from terminal
+    terminal_info = ExecuteProcess(
+        cmd=['echo', '\n\n\033[1;32mTo control your robot, open a new terminal and run: ros2 run teleop_twist_keyboard teleop_twist_keyboard\033[0m\n'],
+        output='screen'
+    )
+    
     # Add all nodes to launch sequence
     ld.add_action(robot_state_publisher_node)
     ld.add_action(static_tf_base_link_to_base_footprint)
     ld.add_action(static_tf_laser_to_base_link)
-    ld.add_action(teleop_node)
     ld.add_action(hardware_controller_node)
     ld.add_action(rviz_node)
+    ld.add_action(terminal_info)
     
     return ld 
